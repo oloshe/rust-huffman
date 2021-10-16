@@ -110,7 +110,6 @@ pub struct HuffmanBinaryMap {
 impl HuffmanBinaryMap {
     pub fn build(huffman_tree: RefHuffmanTree) -> Self {
         let mut map = HashMap::new();
-        let mut max = 0;
         Self::tree_dfs(&Some(huffman_tree), &mut map, &mut vec![]);
         Self { inner: map }
     }
@@ -192,6 +191,7 @@ impl HuffmanCodec {
     }
 
     pub fn decode(source: &[u8], decode_map: &DecodeConfig) -> String {
+        // 防止内存频繁分配，直接定义容量
         let mut result = String::with_capacity(decode_map.capacity);
         let bit_str = source.iter()
             .map(|num| {
@@ -226,8 +226,7 @@ pub struct DecodeConfig {
 impl DecodeConfig {
     pub fn build(source: &String) -> Self {
         let mut map = HashMap::default();
-        let (mut space, mut capacity ) = (0u8, 0usize);
-
+        let (mut space, mut capacity) = (0u8, 0usize);
         let arr = source.split("\n");
         for s in arr {
             let pair: Vec<&str> = s.split(":").collect();
