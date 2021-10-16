@@ -234,7 +234,10 @@ impl DecodeConfig {
             let (mut ch, bit) = (pair[0], pair[1]);
             match ch {
                 "" => ch = "\n",
-                "space" => space = u8::from_str_radix(bit, 10).unwrap(),
+                "space" => {
+                    space = u8::from_str_radix(bit, 10).unwrap();
+                    continue;
+                },
                 _ => (),
             }
             map.insert(bit.to_owned(), ch.chars().nth(0).unwrap());
