@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::{HashMap, hash_map::Iter}, fmt::{Display}, ops::AddAssign, rc::Rc, vec};
+use std::{cell::RefCell, collections::{HashMap, hash_map::{Iter}}, fmt::{Display}, ops::AddAssign, rc::Rc, vec};
 
 type RefHuffmanTree = Rc<RefCell<HuffmanTree>>;
 type Weight = u64;
@@ -110,6 +110,7 @@ pub struct HuffmanBinaryMap {
 impl HuffmanBinaryMap {
     pub fn build(huffman_tree: RefHuffmanTree) -> Self {
         let mut map = HashMap::new();
+        let mut max = 0;
         Self::tree_dfs(&Some(huffman_tree), &mut map, &mut vec![]);
         Self { inner: map }
     }
@@ -143,7 +144,7 @@ impl Display for HuffmanBinaryMap {
                 vec.iter().for_each(|b| {
                     bit_str += if *b { "1" } else { "0" }
                 });
-                buf += format!("{}:{}\n", c, bit_str).as_str();
+                buf += format!("{}:{}\n", *c as u32, bit_str).as_str();
             });
         f.write_str(buf.as_str())
     }
@@ -186,12 +187,12 @@ impl HuffmanCodec {
         // 返回的结果
         (
             result, // 压缩后的字节数组
-            format!("space:{}\n{}", space, bit_map), // 配置文件内容
+            format!("space:{}\ncapacity:{}\n{}", space, source.len(), bit_map), // 配置文件内容
         )
     }
 
     pub fn decode(source: &[u8], decode_map: &DecodeConfig) -> String {
-        let mut result = String::new();
+        let mut result = String::with_capacity(decode_map.capacity);
         let bit_str = source.iter()
             .map(|num| {
                 format!("{u8:>0width$b}", u8=num, width=8)
@@ -200,7 +201,7 @@ impl HuffmanCodec {
             .join("");
         // println!("二进制序列：{}", bit_str);
 
-        let mut tmp_str = String::new();
+        let mut tmp_str = String::with_capacity(20);
         let last_idx = bit_str.len() - decode_map.space as usize;
         for (i, ch) in bit_str.char_indices() {
             if i >= last_idx {
@@ -220,29 +221,34 @@ impl HuffmanCodec {
 pub struct DecodeConfig {
     pub inner: HashMap<String, char>,
     pub space: u8,
+    pub capacity: usize,
 }
 impl DecodeConfig {
     pub fn build(source: &String) -> Self {
-        let mut map = HashMap::new();
-        let mut space = 0u8;
+        let mut map = HashMap::default();
+        let (mut space, mut capacity ) = (0u8, 0usize);
+
         let arr = source.split("\n");
         for s in arr {
             let pair: Vec<&str> = s.split(":").collect();
-            if pair.len() != 2 { 
+            if pair.len() != 2 {
                 continue;
             }
-            let (mut ch, bit) = (pair[0], pair[1]);
+            let (ch, bit) = (pair[0], pair[1]);
             match ch {
-                "" => ch = "\n",
                 "space" => {
                     space = u8::from_str_radix(bit, 10).unwrap();
                     continue;
                 },
+                "capacity" => {
+                    capacity = usize::from_str_radix(bit, 10).unwrap();
+                    continue;
+                },
                 _ => (),
             }
-            map.insert(bit.to_owned(), ch.chars().nth(0).unwrap());
+            map.insert(bit.to_owned(), char::from_u32(u32::from_str_radix(ch, 10).unwrap()).unwrap());
         };
-        Self { inner: map, space }
+        Self { inner: map, space, capacity }
     }
     pub fn get(&self, k: &String) -> Option<&char> {
         self.inner.get(k)
